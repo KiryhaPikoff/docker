@@ -1,0 +1,33 @@
+FROM oraclelinux:7-slim
+
+RUN yum install postgresql -y
+RUN yum install postgresql-server -y
+RUN yum install java-11-openjdk.x86_64 -y
+
+ENV DATABASE_PATH=database
+ENV APP_PATH=application
+
+RUN pwd
+WORKDIR $DATABASE_PATH
+WORKDIR /
+RUN pwd
+WORKDIR $APP_PATH
+RUN pwd
+
+RUN chown postgres /$DATABASE_PATH
+
+WORKDIR /
+RUN yum install nano -y
+RUN touch run_script.sh
+RUN echo -e "#!/bin/bash\n" > /run_script.sh
+RUN echo -e "pg_ctl start -w -D /database\n" > /run_script.sh
+RUN echo -e "createuser -p 5432 -sle postgres -w \n" > /run_script.sh
+RUN echo -e "createdb -p 5432 -U postgres db \n" > /run_script.sh
+RUN echo -e "java -jar /jar-file/example-jpa/build/libs/example-jpa-0.1.0-SNAPSHOT.jar" > /run_script.sh
+
+USER postgres
+
+RUN pg_ctl "initdb" -D /$DATABASE_PATH
+RUN echo -e "local all all trust\nhost all all 0.0.0.0/0 trust\nhost all all ::1/128 trust" > /$DATABASE_PATH/pg_hba.conf
+
+CMD sh run_script.sh
